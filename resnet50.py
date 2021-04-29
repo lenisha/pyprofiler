@@ -8,13 +8,13 @@ import torchvision
 import torchvision.transforms as T
 import torchvision.datasets as datasets
 import torchvision.models as models
-from torch_ort import ORTModule 
+
 
 import torch.profiler
 
 # model in pytorch repo with weights 
 model = models.resnet50(pretrained=True)
-model = ORTModule(model)
+
 
 model.cuda() # load in GPU
 cudnn.benchmark = True #? needed for profiler? 
@@ -46,10 +46,12 @@ with torch.profiler.profile(
         torch.profiler.ProfilerActivity.CPU,
         torch.profiler.ProfilerActivity.CUDA],
     schedule=torch.profiler.schedule(
-        wait=2, # skip first 2 training steps
-        warmup=2, # reach steady and skip few layers, profiling happens ignores results
-        active=6), # only profile 6 steps - allows to focus and skip some layers for reducing overhead(even in prod)
-    on_trace_ready=output_fn,
+        wait=1, # skip first 2 training steps
+        warmup=1, # reach steady and skip few layers, profiling happens ignores results
+        active=2,
+        repeat=1), # only profile 6 steps - allows to focus and skip some layers for reducing overhead(even in prod)
+    #on_trace_ready=output_fn,
+    on_trace_ready=torch.profiler.tensorboard_trace_handler('./trace/test',"worker0"),
     record_shapes=True,
     with_stack=True
 ) as p:

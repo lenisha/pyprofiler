@@ -21,7 +21,7 @@ from torch_ort import ORTModule
 import torch.profiler
 
 def output_fn(p):
-    p.export_chrome_trace("./trace/bert_record_ort/worker0.pt.trace.json")
+    p.export_chrome_trace("./trace/bert_record_nt/worker0.pt.trace.json")
     
 
 def train(model, optimizer, scheduler, train_dataloader, epoch, device, args):
@@ -55,11 +55,11 @@ def train(model, optimizer, scheduler, train_dataloader, epoch, device, args):
             torch.profiler.ProfilerActivity.CUDA],
         schedule=torch.profiler.schedule(
             wait=3, # skip first 2 training steps
-            warmup=5, # reach steady and skip few layers, profiling happens ignores results
-            active=12), # only profile 6 steps - allows to focus and skip some layers for reducing overhead(even in prod)
+            warmup=15, # reach steady and skip few layers, profiling happens ignores results
+            active=20,
+            repeat=1),  # only profile 6 steps - allows to focus and skip some layers for reducing overhead(even in prod)
         on_trace_ready=output_fn,
-        record_shapes=True,
-        with_stack=True
+        record_shapes=True
     ) as profiler:
       # For each batch of training data...
       for step, batch in enumerate(train_dataloader):
@@ -401,8 +401,8 @@ def main():
         print('Enabling ORTModule for training')
         model = ORTModule(model)
        # TODO: change it to False to stop saving ONNX models
-        model._save_onnx = True
-        model._save_onnx_prefix = 'BertForSequenceClassification'
+        #model._save_onnx = True
+        #model._save_onnx_prefix = 'BertForSequenceClassification'
 
     # Tell pytorch to run this model on the GPU.
     if torch.cuda.is_available() and not args.no_cuda:
